@@ -8,5 +8,4 @@ verify_ssl = true
 [packages]
 scapy = "*"
 
-[requires]
-python_version = "3.7"
+
