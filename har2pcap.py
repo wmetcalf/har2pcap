@@ -96,6 +96,9 @@ def main(input_file, output_pcap):
             dst = entry.get("serverIPAddress")
             url = entry.get("request", {}).get("url", "")
             reqmethod = entry.get("request", {}).get("method", "GET")
+            if reqmethod == "CONNECT":
+                print("skipping connect request. noise from some proxy products")
+                continue
             reqversion = entry.get("request", {}).get("httpVersion", "HTTP/1.1")
             stat_code = entry.get("response", {}).get("status", -1)
             if url:
@@ -119,6 +122,7 @@ def main(input_file, output_pcap):
                     print("failed to parse url {0}".format(e))
                     pass
             req = b""
+            resp = b""
             req = "{0} {1} {2}\r\n".format(reqmethod, path, reqversion)
             headers_arr = entry.get("request", {}).get("headers")
             if headers_arr:
@@ -135,7 +139,7 @@ def main(input_file, output_pcap):
                 req = req + "\r\n\r\n"
             if entry.get("PostData", {}).get("text", ""):
                 req = req = entry.get("PostData", {}).get("text", "")
-            req = req.encode('utf-8')
+            req = req.encode("utf-8")
             if entry.get("response", {}):
                 body = ""
                 respversion = entry.get("response", {}).get("httpVersion", "")
@@ -146,7 +150,7 @@ def main(input_file, output_pcap):
                 else:
                     body = entry.get("response", {}).get("content", {}).get("text", "")
                 if not isinstance(body, bytes):
-                    body = body.encode('utf-8')  # uses 'utf-8' for encoding
+                    body = body.encode("utf-8")  # uses 'utf-8' for encoding
                 else:
                     body = body
 
@@ -173,12 +177,14 @@ def main(input_file, output_pcap):
                                         resp = resp + ": {0}".format(value)
                                 resp = resp + "\r\n"
                     resp = resp + "\r\n"
-                    resp = resp.encode('utf-8')
+                    resp = resp.encode("utf-8")
                     resp = resp + body
             print("src: %s dst: %s sport: %s dport: %s" % (src, dst, sport, dport))
             (seq, ack) = build_handshake(pktdump, src, dst, sport, dport)
-            (seq, ack) = make_poop(pktdump, src, dst, sport, dport, seq, ack, req)
-            (seq, ack) = make_poop(pktdump, dst, src, dport, sport, seq, ack, resp)
+            if req:
+                (seq, ack) = make_poop(pktdump, src, dst, sport, dport, seq, ack, req)
+            if resp:
+                (seq, ack) = make_poop(pktdump, dst, src, dport, sport, seq, ack, resp)
             build_finshake(pktdump, src, dst, sport, dport, seq, ack)
         except Exception as e:
             print("Failed to handle session skipping {0}".format(e))
@@ -189,7 +195,7 @@ def main(input_file, output_pcap):
 
 
 if __name__ == "__main__":
-    #if sys.version_info < (3, 0):
+    # if sys.version_info < (3, 0):
     #    print("Need newer snakes.. requires Python 3.x")
     #    sys.exit(1)
     parser = argparse.ArgumentParser(description="har2pcap")
