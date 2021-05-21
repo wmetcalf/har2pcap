@@ -21,6 +21,7 @@ else:
     from urllib.parse import urlparse
 
 import argparse
+
 try:
     import pybase64 as base64
 except:
@@ -98,7 +99,7 @@ def main(input_file, output_pcap):
             dport = 80
             path = "/"
             src = "192.168.1.100"
-            dst = entry.get("serverIPAddress","192.0.2.1")
+            dst = entry.get("serverIPAddress", "192.0.2.1")
             url = entry.get("request", {}).get("url", "")
             reqmethod = entry.get("request", {}).get("method", "GET")
             if reqmethod == "CONNECT":
