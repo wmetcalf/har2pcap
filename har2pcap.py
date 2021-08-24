@@ -167,6 +167,12 @@ def main(input_file, output_pcap):
                         for header in headers_arr:
                             hname = header.get("name", "")
                             if hname:
+                                if hname.lower() == "x-twinwave-remote-server-ip":
+                                    if header.get("value", ""):
+                                        dst = header.get("value")
+                                if hname.lower() == "x-twinwave-remote-server-port":
+                                    if header.get("value", ""):
+                                        dport = int(header.get("value"))
                                 if hname.lower() == "transfer-encoding" and body:
                                     if body:
                                         resp = resp + "Content-Length"
