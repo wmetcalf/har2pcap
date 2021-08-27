@@ -106,6 +106,12 @@ def main(input_file, output_pcap):
                 print("skipping connect request. noise from some proxy products")
                 continue
             reqversion = entry.get("request", {}).get("httpVersion", "HTTP/1.1")
+            # fake it till you make it
+            if reqversion in ["h2", "h2c"]:
+                reqversion = "HTTP/1.1"
+            reqbody = entry.get("request", {}).get("postData", {}).get("text", "")
+            if not reqbody:
+                reqbody = entry.get("request", {}).get("PostData", {}).get("text", "")
             stat_code = entry.get("response", {}).get("status", -1)
             if url:
                 try:
@@ -134,21 +140,27 @@ def main(input_file, output_pcap):
             if headers_arr:
                 for header in headers_arr:
                     hname = header.get("name", "")
-                    if hname:
+                    if hname and hname not in [":method", ":scheme", ":path", ":authority"]:
                         req = req + hname
                         value = header.get("value", "")
                         if value:
-                            req = req + ": {0}".format(value)
+                           if hname.lower() == "content-length":
+                               if reqbody:
+                                   value = len(reqbody)
+                           req = req + ": {0}".format(value)
                         req = req + "\r\n"
                 req = req + "\r\n"
             else:
                 req = req + "\r\n\r\n"
-            if entry.get("PostData", {}).get("text", ""):
-                req = req = entry.get("PostData", {}).get("text", "")
+            if reqbody:
+                req = req + reqbody
             req = req.encode("utf-8")
             if entry.get("response", {}):
                 body = ""
-                respversion = entry.get("response", {}).get("httpVersion", "")
+                respversion = entry.get("response", {}).get("httpVersion", "HTTP/1.1")
+                # fake it till you make it
+                if respversion in ["h2", "h2c"]:
+                    respversion = "HTTP/1.1"
                 respstatus = entry.get("response", {}).get("status", None)
                 respstattxt = entry.get("response", {}).get("statusText", "")
                 if entry.get("response", {}).get("content", {}).get("encoding", "") == "base64":
@@ -179,7 +191,7 @@ def main(input_file, output_pcap):
                                         value = len(body)
                                         resp = resp + ": {0}".format(value)
                                 # most browsers/mitm proxies decode gzip,br etc for you.
-                                elif hname.lower() != "content-encoding":
+                                elif hname.lower() not in ["content-encoding", ":status"]:
                                     resp = resp + hname
                                     value = header.get("value", "")
                                     if value:
